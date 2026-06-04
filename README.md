@@ -48,7 +48,7 @@ Portal /    →  same REST paths (cached reads)
 On `uvicorn app.main:app`:
 
 1. Alembic migrations (`init_db`)
-2. Idempotent seed (`app/seed.py` — default mapping 223 → N407NW)
+2. Idempotent seed (`app/seed.py` — default mapping 223 → N407NW for developement purposes since there is no REAL mapping table availble yet.)
 3. Ensure GPMS JWT (`gpms_auth_tokens`)
 4. **One immediate HUMS poll**
 5. APScheduler: HUMS + FDM every 10m; FDM **also runs immediately**; token renewal weekly
