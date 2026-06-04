@@ -185,10 +185,13 @@ chmod +x scripts/docker-push.sh
 
 **GitHub Actions** (`.github/workflows/docker-publish.yml`):
 
-- **Pull request → `main`:** `pytest` + Docker build (no push)
+- **Pull request → `main`:** `pytest` + multi-platform Docker build (no push)
 - **Push to `main`:** same tests, then push `app-latest` / `proxy-latest` and `app-sha-*` / `proxy-sha-*`
+- **Platforms:** `linux/amd64` and `linux/arm64` (Intel/AMD servers and Apple Silicon Macs)
 
 Add repository secrets: `DOCKERHUB_USERNAME` (`iyedacheche`), `DOCKERHUB_TOKEN` (Docker Hub access token).
+
+After the first multi-arch publish, `docker compose -f docker-compose.deploy.yml pull` works on Mac (arm64) without `--build`.
 
 ### Option B — Homebrew Postgres
 
