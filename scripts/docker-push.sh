@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Build and push app + proxy tags to Docker Hub (iyedacheche/brazos-gmps-app).
+# Build and push app + proxy tags. Requires DOCKER_IMAGE (repo path without tag).
+# Example: export DOCKER_IMAGE=mycompany/brazos-gmps-app
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-IMAGE="${DOCKER_IMAGE:-iyedacheche/brazos-gmps-app}"
+IMAGE="${DOCKER_IMAGE:?Set DOCKER_IMAGE (e.g. mycompany/brazos-gmps-app)}"
 TAG_SUFFIX="${1:-latest}"
 
 if ! docker info >/dev/null 2>&1; then

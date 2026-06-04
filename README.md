@@ -154,30 +154,39 @@ Or: `docker compose --profile full up -d --build`
 
 Stop host `uvicorn` on 8080 before starting Compose.
 
-**VM / production (pull from Docker Hub):**
+**VM / production (pull from company container registry):**
+
+Set `DOCKER_IMAGE` in `.env` (see `.env.docker.example`) — full repo path **without** tag, e.g. `mycompany/brazos-gmps-app`.
 
 ```bash
-docker login
+docker login    # company registry credentials
 docker compose -f docker-compose.deploy.yml pull
 docker compose -f docker-compose.deploy.yml up -d
 ```
 
-Images: [`iyedacheche/brazos-gmps-app`](https://hub.docker.com/r/iyedacheche/brazos-gmps-app) — tags `app-latest` and `proxy-latest` (same repo). Pin a release: `BRAZOS_APP_IMAGE_TAG=app-sha-<short> BRAZOS_PROXY_IMAGE_TAG=proxy-sha-<short>`.
+Tags on that repo: `app-latest`, `proxy-latest`, and `app-sha-*` / `proxy-sha-*`. Pin a release: `BRAZOS_APP_IMAGE_TAG=app-sha-<short> BRAZOS_PROXY_IMAGE_TAG=proxy-sha-<short>`.
 
 Local build on the server instead: `docker compose -f docker-compose.deploy.yml up -d --build`
 
-### Docker Hub and CI/CD
+### Container registry and CI/CD
 
-| Item | Value |
-|------|--------|
-| Docker Hub repo | `iyedacheche/brazos-gmps-app` |
+| Item | Configure |
+|------|-----------|
+| Image repo (no tag) | `DOCKER_IMAGE` in `.env` and GitHub **repository variable** |
 | App tag | `app-latest`, `app-sha-<git short sha>` |
 | Proxy tag | `proxy-latest`, `proxy-sha-<git short sha>` |
 | Postgres | `postgres:16-alpine` (official image, not published) |
 
+**When the company registry is ready:**
+
+1. GitHub → **Settings → Secrets and variables → Actions → Variables** → `DOCKER_IMAGE` = e.g. `mycompany/brazos-gmps-app`
+2. Same value in deploy `.env`
+3. Secrets: `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (or rename to match your registry; workflow uses Docker login action)
+
 **Manual push** (after `docker login`):
 
 ```bash
+export DOCKER_IMAGE=mycompany/brazos-gmps-app
 chmod +x scripts/docker-push.sh
 ./scripts/docker-push.sh          # pushes app-latest + proxy-latest
 ./scripts/docker-push.sh v0.2.0   # pushes app-v0.2.0 + proxy-v0.2.0
@@ -186,12 +195,10 @@ chmod +x scripts/docker-push.sh
 **GitHub Actions** (`.github/workflows/docker-publish.yml`):
 
 - **Pull request → `main`:** `pytest` + multi-platform Docker build (no push)
-- **Push to `main`:** same tests, then push `app-latest` / `proxy-latest` and `app-sha-*` / `proxy-sha-*`
+- **Push to `main`:** tests + push tags (only if `DOCKER_IMAGE` variable is set)
 - **Platforms:** `linux/amd64` and `linux/arm64` (Intel/AMD servers and Apple Silicon Macs)
 
-Add repository secrets: `DOCKERHUB_USERNAME` (`iyedacheche`), `DOCKERHUB_TOKEN` (Docker Hub access token).
-
-After the first multi-arch publish, `docker compose -f docker-compose.deploy.yml pull` works on Mac (arm64) without `--build`.
+Until `DOCKER_IMAGE` is set in GitHub, the push job fails with a clear error (tests still pass).
 
 ### Option B — Homebrew Postgres
 

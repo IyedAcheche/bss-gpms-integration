@@ -1,10 +1,11 @@
 # Run tests on PRs; push app + proxy tags to Docker Hub on merge to main.
 #
-# Hub repo (single): iyedacheche/brazos-gmps-app
+# Image repo (no tag): set GitHub repository variable DOCKER_IMAGE
+#   e.g. mycompany/brazos-gmps-app  or  registry.example.com/gpms/brazos-gmps-app
 # Tags: app-latest, proxy-latest, app-sha-<short>, proxy-sha-<short>
 # Platforms: linux/amd64, linux/arm64 (Apple Silicon + typical Linux VMs)
 #
-# GitHub secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
+# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (registry credentials)
 
 name: CI and Docker publish
 
@@ -15,7 +16,6 @@ on:
     branches: [main]
 
 env:
-  IMAGE: iyedacheche/brazos-gmps-app
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
           file: Dockerfile
           platforms: ${{ env.PLATFORMS }}
           push: false
-          tags: ${{ env.IMAGE }}:app-ci
+          tags: brazos-gpms-app:app-ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -78,7 +78,7 @@ jobs:
           file: proxy/Dockerfile
           platforms: ${{ env.PLATFORMS }}
           push: false
-          tags: ${{ env.IMAGE }}:proxy-ci
+          tags: brazos-gpms-app:proxy-ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -86,7 +86,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      IMAGE: ${{ vars.DOCKER_IMAGE }}
     steps:
+      - name: Require DOCKER_IMAGE repository variable
+        run: |
+          if [ -z "${IMAGE}" ]; then
+            echo "::error::Set GitHub repo variable DOCKER_IMAGE (e.g. mycompany/brazos-gmps-app). Push skipped until configured."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: docker/setup-qemu-action@v3
