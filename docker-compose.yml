@@ -1,0 +1,21 @@
+# Local Postgres for Brazos GPMS Integration (see README.md)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: brazos-gpms-postgres
+    environment:
+      POSTGRES_USER: brazos
+      POSTGRES_PASSWORD: brazos
+      POSTGRES_DB: brazos_gpms
+    ports:
+      - "5432:5432"
+    volumes:
+      - brazos_gpms_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brazos -d brazos_gpms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  brazos_gpms_pgdata:

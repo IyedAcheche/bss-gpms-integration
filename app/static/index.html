@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brazos GPMS Integration</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Brazos GPMS Integration</h1>
+    <p class="subtitle">Mapped aircraft only · cached HUMS + FDM · reads from Postgres (not live GPMS)</p>
+    <p class="header-links">
+      <a href="/docs" target="_blank" rel="noopener">API docs (Swagger)</a>
+      <span class="sep">·</span>
+      <a href="/redoc" target="_blank" rel="noopener">ReDoc</a>
+      <span class="sep">·</span>
+      <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI JSON</a>
+    </p>
+  </header>
+
+  <main>
+    <section id="events-section" class="card hidden">
+      <h2>Critical Events</h2>
+      <p class="section-hint">Alarms from cached HUMS (MD/RTB = alarm) for mapped aircraft only.</p>
+      <ul id="events-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>GPMS ↔ Brazos mappings</h2>
+      <p class="section-hint">
+        Only mapped GPMS IDs are polled and shown.
+        <span class="endpoint-tag">GET /api/mappings</span>
+      </p>
+      <button id="load-mappings">Refresh mappings</button>
+      <div class="table-scroll">
+        <table id="mappings-table">
+          <thead>
+            <tr>
+              <th>GPMS ID</th>
+              <th>Brazos tail</th>
+              <th>GPMS name</th>
+              <th>Active</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>HUMS Status (mapped)</h2>
+      <p class="section-hint">
+        Cached from background HUMS poll (<code>GET /user/assets/{id}</code> per mapped ID, every 10 min).
+        UI reads <span class="endpoint-tag">GET /api/hums</span> — not GPMS directly.
+        <strong>Click a row</strong> to load FDM below.
+      </p>
+      <button id="load-hums">Refresh HUMS</button>
+      <div class="table-scroll">
+        <table id="hums-table" class="selectable-table">
+          <thead>
+            <tr>
+              <th>Brazos tail</th>
+              <th>GPMS ID</th>
+              <th>Asset Name</th>
+              <th class="hums-health-col">MD</th>
+              <th class="hums-health-col">RTB</th>
+              <th>Flights ingested</th>
+              <th>Last Operation</th>
+              <th>Polled At</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="fdm-section" class="card">
+      <h2>FDM — Flights &amp; exportstates <span id="fdm-selected-label" class="states-meta"></span></h2>
+      <p class="section-hint">
+        All data from Postgres cache. Background FDM poll: backfill operations (up to 500), then incremental
+        <code>newimports</code> + exportstates CSV per mapped ID. UI never calls GPMS.
+      </p>
+      <button id="fdm-refresh-fleets">Refresh aircraft list</button>
+
+      <div class="fdm-explorer">
+        <div class="fdm-pane">
+          <h3>1. Aircraft <span class="endpoint-tag">GET /api/fdm/aircraft</span></h3>
+          <table id="fdm-assets-table" class="selectable-table">
+            <thead>
+              <tr>
+                <th>Brazos tail</th>
+                <th>GPMS ID</th>
+                <th>Name</th>
+                <th>MD</th>
+                <th>RTB</th>
+                <th>Flights</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="fdm-step-2" class="fdm-pane fdm-step hidden">
+          <h3>2. Asset details <span class="endpoint-tag">GET /api/fdm/aircraft/{id}</span></h3>
+          <pre id="fdm-asset-detail" class="detail-pre"></pre>
+        </div>
+
+        <div id="fdm-step-3" class="fdm-pane fdm-pane-wide fdm-step hidden">
+          <h3>3. Operations <span class="endpoint-tag">GET /api/fdm/aircraft/{id}/operations</span></h3>
+          <table id="fdm-ops-table" class="selectable-table">
+            <thead>
+              <tr>
+                <th>Operation ID</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Flight (s)</th>
+                <th>Ingested At</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="fdm-step-4" class="fdm-pane fdm-pane-wide fdm-step hidden">
+          <div class="states-panel-header">
+            <h3>4. Exportstates <span class="endpoint-tag">GET /api/fdm/.../exportstates</span></h3>
+            <span id="fdm-export-meta" class="states-meta"></span>
+          </div>
+          <div class="states-controls">
+            <label>
+              <input type="checkbox" id="fdm-full-columns" />
+              All 36 columns
+            </label>
+            <label>
+              Max rows
+              <select id="fdm-row-limit">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+                <option value="500">500</option>
+              </select>
+            </label>
+            <a id="fdm-download-csv" class="hidden" href="#" download>Download CSV</a>
+          </div>
+          <div id="fdm-export-table-wrap" class="states-table-wrap">
+            <table id="fdm-export-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js?v=0.3"></script>
+</body>
+</html>
