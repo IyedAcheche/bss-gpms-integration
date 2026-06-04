@@ -1,37 +1,31 @@
-# Brazos GPMS Integration — Docker Compose
+# Production-style stack: nginx is the only public entry; Postgres is internal only.
 #
-# Postgres only:
-#   docker compose up -d
+#   docker compose -f docker-compose.deploy.yml up -d --build
 #
-# Full stack (postgres + app + nginx):
-#   docker compose --profile full up -d --build
-#   Browser: http://localhost:8080  (nginx → app:8080)
-#
-# See docker-compose.deploy.yml for VM deploy (no published DB port).
+# Requires .env with GPMS_EMAIL / GPMS_PASSWORD (and DATABASE_URL overridden below).
 
 services:
   postgres:
     image: postgres:16-alpine
     container_name: brazos-gpms-postgres
+    restart: always
     environment:
       POSTGRES_USER: brazos
       POSTGRES_PASSWORD: brazos
       POSTGRES_DB: brazos_gpms
-    ports:
-      - "5432:5432"
     volumes:
       - brazos_gpms_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U brazos -d brazos_gpms"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
 
   app:
-    profiles: ["full"]
     build:
       context: .
     container_name: brazos-gpms-app
+    restart: always
     expose:
       - "8080"
     env_file:
@@ -41,7 +35,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
     healthcheck:
       test:
         [
@@ -56,21 +49,20 @@ services:
       start_period: 90s
 
   proxy:
-    profiles: ["full"]
     build:
       context: ./proxy
     container_name: brazos-gpms-proxy
+    restart: always
     ports:
       - "8080:8080"
     environment:
       LISTEN_PORT: "8080"
       APP_HOST: app
       APP_PORT: "8080"
-      DOMAIN: localhost
+      DOMAIN: ${GPMS_DOMAIN:-localhost}
     depends_on:
       app:
         condition: service_healthy
-    restart: unless-stopped
     healthcheck:
       test:
         [
