@@ -154,7 +154,41 @@ Or: `docker compose --profile full up -d --build`
 
 Stop host `uvicorn` on 8080 before starting Compose.
 
-**VM / production:** `docker compose -f docker-compose.deploy.yml up -d --build`
+**VM / production (pull from Docker Hub):**
+
+```bash
+docker login
+docker compose -f docker-compose.deploy.yml pull
+docker compose -f docker-compose.deploy.yml up -d
+```
+
+Images: [`iyedacheche/brazos-gmps-app`](https://hub.docker.com/r/iyedacheche/brazos-gmps-app) — tags `app-latest` and `proxy-latest` (same repo). Pin a release: `BRAZOS_APP_IMAGE_TAG=app-sha-<short> BRAZOS_PROXY_IMAGE_TAG=proxy-sha-<short>`.
+
+Local build on the server instead: `docker compose -f docker-compose.deploy.yml up -d --build`
+
+### Docker Hub and CI/CD
+
+| Item | Value |
+|------|--------|
+| Docker Hub repo | `iyedacheche/brazos-gmps-app` |
+| App tag | `app-latest`, `app-sha-<git short sha>` |
+| Proxy tag | `proxy-latest`, `proxy-sha-<git short sha>` |
+| Postgres | `postgres:16-alpine` (official image, not published) |
+
+**Manual push** (after `docker login`):
+
+```bash
+chmod +x scripts/docker-push.sh
+./scripts/docker-push.sh          # pushes app-latest + proxy-latest
+./scripts/docker-push.sh v0.2.0   # pushes app-v0.2.0 + proxy-v0.2.0
+```
+
+**GitHub Actions** (`.github/workflows/docker-publish.yml`):
+
+- **Pull request → `main`:** `pytest` + Docker build (no push)
+- **Push to `main`:** same tests, then push `app-latest` / `proxy-latest` and `app-sha-*` / `proxy-sha-*`
+
+Add repository secrets: `DOCKERHUB_USERNAME` (`iyedacheche`), `DOCKERHUB_TOKEN` (Docker Hub access token).
 
 ### Option B — Homebrew Postgres
 
@@ -190,6 +224,7 @@ Migrations also run on app startup (`init_db`).
 | `scripts/setup_local_postgres.sh` | Docker Postgres + migrations + seed |
 | `scripts/seed_mappings.py` | Idempotent mapping seed |
 | `scripts/run_poll_once.py` | HUMS + FDM poll once (no scheduler) |
+| `scripts/docker-push.sh` | Build and push `app-*` / `proxy-*` tags to Docker Hub |
 
 ## Operator portal
 

@@ -1,8 +1,18 @@
 # Production-style stack: nginx is the only public entry; Postgres is internal only.
 #
+# Pull published images (after merge to main):
+#   docker login
+#   docker compose -f docker-compose.deploy.yml pull
+#   docker compose -f docker-compose.deploy.yml up -d
+#
+# Override tags (default app-latest / proxy-latest):
+#   BRAZOS_APP_IMAGE_TAG=app-sha-abc1234 BRAZOS_PROXY_IMAGE_TAG=proxy-sha-abc1234 \
+#     docker compose -f docker-compose.deploy.yml up -d
+#
+# Local build instead of Hub (no pull):
 #   docker compose -f docker-compose.deploy.yml up -d --build
 #
-# Requires .env with GPMS_EMAIL / GPMS_PASSWORD (and DATABASE_URL overridden below).
+# Requires .env with GPMS_EMAIL / GPMS_PASSWORD (DATABASE_URL overridden below).
 
 services:
   postgres:
@@ -22,6 +32,7 @@ services:
       retries: 5
 
   app:
+    image: iyedacheche/brazos-gmps-app:${BRAZOS_APP_IMAGE_TAG:-app-latest}
     build:
       context: .
     container_name: brazos-gpms-app
@@ -49,6 +60,7 @@ services:
       start_period: 90s
 
   proxy:
+    image: iyedacheche/brazos-gmps-app:${BRAZOS_PROXY_IMAGE_TAG:-proxy-latest}
     build:
       context: ./proxy
     container_name: brazos-gpms-proxy
